@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gully Cricket Live Scorer Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Old Reliable Firebase SDK (Compat Version) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+    <style>
+        :root {
+            --primary: #0f172a;
+            --secondary: #2563eb;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --text-light: #f8fafc;
+            --bg-dark: #020617;
+            --card-bg: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-light); padding: 15px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h2, h3 { text-align: center; margin-bottom: 15px; }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); margin-bottom: 20px; position: relative; }
+        
+        /* LOCALSEDIGITAL BANNER */
+        .promo-banner-top { background: linear-gradient(135deg, #1e3a8a, #3b82f6); padding: 12px; border-radius: 10px; text-align: center; margin-bottom: 15px; border: 2px solid #60a5fa; box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
+        .promo-banner-top p { font-size: 13px; color: #bfdbfe; margin-bottom: 5px; font-weight: bold; }
+        .promo-btn-top { display: inline-block; background: #f59e0b; color: #0f172a; font-weight: 700; padding: 6px 15px; border-radius: 6px; text-decoration: none; font-size: 14px; transition: 0.3s; }
+        
+        /* PAISABACHAOABHIYAN BANNER */
+        .promo-banner-bottom { background: linear-gradient(135deg, #064e3b, #10b981); padding: 12px; border-radius: 10px; text-align: center; margin-top: 15px; margin-bottom: 10px; border: 2px solid #34d399; box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+        .promo-banner-bottom p { font-size: 13px; color: #d1fae5; margin-bottom: 5px; font-weight: bold; }
+        .promo-btn-bottom { display: inline-block; background: #ffffff; color: #064e3b; font-weight: 700; padding: 6px 15px; border-radius: 6px; text-decoration: none; font-size: 14px; transition: 0.3s; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 14px; color: #94a3b8; }
+        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 16px; }
+        
+        .score-header { text-align: center; border-bottom: 2px solid #334155; padding-bottom: 15px; margin-top: 15px; }
+        .main-score { font-size: 52px; font-weight: 700; color: #f59e0b; margin: 5px 0; }
+        .live-tag { background: var(--danger); color: white; padding: 3px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; position: absolute; top: 15px; left: 20px; }
+        .meta-info { text-align: center; font-size: 13px; color: #94a3b8; margin-bottom: 5px; }
+        .date-time-display { text-align: center; font-size: 14px; color: #f59e0b; font-weight: bold; margin-bottom: 15px; }
+
+        .ball-by-ball-container { margin: 15px 0; padding: 12px; background: #0f172a; border-radius: 8px; text-align: center; }
+        .ball-by-ball-title { font-size: 12px; color: #94a3b8; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ball-history-row { display: flex; justify-content: center; align-items: center; gap: 8px; overflow-x: auto; min-height: 36px; }
+        .ball-num { min-width: 32px; height: 32px; background: #334155; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; color: white; }
+        .ball-wicket { background: var(--danger) !important; color: white; }
+        .ball-four-six { background: #1e3a8a !important; color: #60a5fa !important; border: 1px solid #60a5fa; }
+
+        .stats-table { width: 100%; margin: 15px 0; border-collapse: collapse; }
+        .stats-table th { text-align: left; color: #94a3b8; font-size: 12px; padding: 5px; border-bottom: 1px solid #334155; }
+        .stats-table td { padding: 10px 5px; font-size: 15px; border-bottom: 1px solid #1e293b; }
+        .active-p { color: #4ade80; font-weight: 600; }
+
+        .grid-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+        .btn-run { background: #334155; color: white; border: none; border-radius: 8px; padding: 14px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .btn-boundary { background: #1e3a8a; color: #60a5fa; border: none; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
+        .btn-out { background: var(--danger); grid-column: span 2; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        
+        .share-box { margin-top: 15px; background: #0f172a; padding: 10px; border-radius: 8px; text-align: center; border: 1px dashed #475569;}
+        .popup { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; padding: 20px; z-index: 999; }
+        .popup-content { background: var(--card-bg); padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; }
+        
+        .result-card { margin-top: 20px; background: #1e3a8a; padding: 15px; border-radius: 8px; text-align: center; border: 2px solid #f59e0b; }
+        .btn-next-match { display: block; width: 100%; background: #f59e0b; color: #0f172a; border: none; padding: 12px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; font-size: 15px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="promo-banner-top">
+        <p>🚀 Powered By Localsedigital</p>
+        <a href="https://localsedigital.com" target="_blank" class="promo-btn-top">Visit Localsedigital.com 🌐</a>
+    </div>
+
+    <!-- STEP 1: SETUP -->
+    <div id="setup-screen" class="card">
+        <div class="form-group">
+            <label>Language / भाषा चुनें</label>
+            <select id="app-lang" onchange="toggleLanguage()">
+                <option value="hi">Hindi (हिंदी)</option>
+                <option value="en">English</option>
+            </select>
+        </div>
+        <h2 id="setup-title">🏏 गली क्रिकेट लाइव सेटअप</h2>
+        <div class="date-time-display" id="live-time-box">लोड हो रहा है...</div>
+        
+        <div class="form-group">
+            <label id="lbl-match-name">मैच / टूर्नामेंट का नाम</label>
+            <input type="text" id="match-name" placeholder="जैसे: रामनगर प्रीमियर लीग">
+        </div>
+        <div class="form-group">
+            <label id="lbl-team-a">बैटिंग टीम का नाम (Inning 1)</label>
+            <input type="text" id="team-a" value="Team A">
+        </div>
+        <div class="form-group">
+            <label id="lbl-team-b">बॉलिंग टीम का नाम (Inning 1)</label>
+            <input type="text" id="team-b" value="Team B">
+        </div>
+        <div class="form-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div>
+                <label id="lbl-toss">टॉस किसने जीता?</label>
+                <select id="toss-winner">
+                    <option value="Team A">Team A</option>
+                    <option value="Team B">Team B</option>
+                </select>
+            </div>
+            <div>
+                <label id="lbl-decision">क्या फैसला किया?</label>
+                <select id="toss-decision">
+                    <option value="Batting">बैटिंग (Bat)</option>
+                    <option value="Bowling">बॉलिंग (Bowl)</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-group">
+            <label id="lbl-overs">कुल ओवर (Total Overs)</label>
+            <input type="number" id="match-overs" value="5">
+        </div>
+        <div class="form-group">
+            <label id="lbl-striker">स्ट्राइक बैट्समैन (Striker)</label>
+            <input type="text" id="player-bat1" placeholder="जैसे: संदीप">
+        </div>
+        <div class="form-group">
+            <label id="lbl-nonstriker">नॉन-स्ट्राइक बैट्समैन (Non-Striker)</label>
+            <input type="text" id="player-bat2" placeholder="जैसे: अमित">
+        </div>
+        <div class="form-group">
+            <label id="lbl-bowler">पहला बॉलर (Bowler)</label>
+            <input type="text" id="player-bowl" placeholder="जैसे: राहुल">
+        </div>
+        <button id="btn-start" onclick="startMatch()">मैच शुरू और लाइव करें 🚀</button>
+    </div>
+
+    <!-- STEP 2: SCOREBOARD -->
+    <div id="scoreboard-screen" class="card hidden">
+        <div class="live-tag">LIVE</div>
+        <div class="meta-info" id="view-match-title" style="font-weight: bold; color: #f59e0b; margin-top: 10px; font-size: 16px;"></div>
+        <div class="meta-info" id="view-toss-status" style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;"></div>
+
+        <div class="score-header">
+            <h3 id="view-teams">Team A vs Team B</h3>
+            <div class="main-score"><span id="score-runs">0</span> / <span id="score-wickets">0</span></div>
+            <div style="font-size: 18px; color: #94a3b8;">ओवर: <span id="score-overs">0.0</span> / <span id="max-overs">5</span></div>
+            <div style="color: #a1a1aa; font-size: 14px; margin-top: 5px;">CRR: <span id="current-rr">0.00</span></div>
+        </div>
+
+        <div class="ball-by-ball-container">
+            <div class="ball-by-ball-title" id="lbl-recent">Recent Balls (This Over)</div>
+            <div class="ball-history-row" id="live-ball-history"></div>
+        </div>
+
+        <div class="share-box" id="share-section">
+            <p id="lbl-share" style="font-size: 12px; color: #94a3b8; margin-bottom: 5px;">ग्रुप में लाइव लिंक शेयर करें 👇</p>
+            <button onclick="shareMatchLink()" style="padding: 10px; font-size: 14px; background: #16a34a; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold;">व्हाट्सएप पर शेयर करें 📲</button>
+        </div>
+
+        <table class="stats-table">
+            <thead>
+                <tr><th id="th-bat">बैट्समैन</th><th id="th-r">रन</th><th id="th-b">बॉल</th><th>4s</th><th>6s</th><th>SR</th></tr>
+            </thead>
+            <tbody>
+                <tr id="row-bat1">
+                    <td id="name-bat1" class="active-p">Striker</td>
+                    <td id="runs-bat1">0</td><td id="balls-bat1">0</td><td id="fours-bat1">0</td><td id="sixes-bat1">0</td><td id="sr-bat1">0.0</td>
+                </tr>
+                <tr id="row-bat2">
+                    <td id="name-bat2">Non-Striker</td>
+                    <td id="runs-bat2">0</td><td id="balls-bat2">0</td><td id="fours-bat2">0</td><td id="sixes-bat2">0</td><td id="sr-bat2">0.0</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="stats-table">
+            <thead>
+                <tr><th id="th-bowl">बॉलर</th><th id="th-o">ओवर</th><th id="th-br">रन</th><th id="th-w">विकेट</th><th>ECO</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td id="name-bowl">Bowler</td>
+                    <td id="overs-bowl">0.0</td><td id="runs-bowl">0</td><td id="wickets-bowl">0</td><td id="eco-bowl">0.0</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div id="scorer-controls">
+            <div class="grid-buttons">
+                <button class="btn-run" onclick="addRun(0)">0</button>
+                <button class="btn-run" onclick="addRun(1)">1</button>
+                <button class="btn-run" onclick="addRun(2)">2</button>
+                <button class="btn-run" onclick="addRun(3)">3</button>
+                <button class="btn-boundary" onclick="addRun(4)">4️⃣ चौका</button>
+                <button class="btn-boundary" onclick="addRun(6)">6️⃣ छक्का</button>
+                <button class="btn-run" style="background:#b45309;" onclick="addExtra('WD')">WD</button>
+                <button class="btn-run" style="background:#b45309;" onclick="addExtra('NB')">NB</button>
+                <button class="btn-out" onclick="triggerWicket()">🔴 OUT</button>
+                <button class="btn-run" style="background:#64748b; grid-column: span 1;" onclick="undoLastBall()">↩️ UNDO</button>
+            </div>
+        </div>
+        
+        <div id="match-result-card" class="result-card hidden">
+            <h3 id="result-text" style="color:#f59e0b; margin-bottom:5px;">🏆 Match Finished!</h3>
+            <p id="mom-text" style="color:#4ade80; font-weight:bold; margin-bottom:10px; font-size:16px;">🌟 Man of the Match: </p>
+            <button id="btn-next-match" class="btn-next-match" onclick="resetForNextMatch()">Next Match Setup 🏏</button>
+        </div>
+    </div>
+    
+    <div class="promo-banner-bottom">
+        <p>💰 पैसों की बचत और सही ज्ञान सीखें</p>
+        <a href="https://www.paisabachaoabhiyan.in" target="_blank" class="promo-btn-bottom">Visit Paisabachaoabhiyan.in 💹</a>
+    </div>
+</div>
+
+<!-- POPUPS -->
+<div id="popup-next-batsman" class="popup hidden">
+    <div class="popup-content">
+        <h3 id="pop-txt-bat">☝️ विकेट गिरा! नए बैट्समैन का नाम लिखें:</h3>
+        <input type="text" id="new-batsman-name" style="margin: 15px 0;" placeholder="नया खिलाड़ी">
+        <button onclick="submitNewBatsman()">मैदान में भेजें</button>
+    </div>
+</div>
+
+<div id="popup-next-bowler" class="popup hidden">
+    <div class="popup-content">
+        <h3 id="pop-txt-bowl">🔄 OVER समाप्त! नए बॉलर का नाम लिखें:</h3>
+        <input type="text" id="new-bowler-name" style="margin: 15px 0;" placeholder="नया बॉलर">
+        <button onclick="submitNewBowler()">OVER शुरू करें</button>
+    </div>
+</div>
+
+<script>
+    // CRITICAL BUG FIX: Switched to your actual active Firebase Project ID 'gully-cricket-73b1b'
+    const firebaseConfig = {
+        apiKey: "AIzaSyDEYgUvNl_23F8Y-y9w8m-H7yE_xXo668", 
+        authDomain: "gully-cricket-73b1b.firebaseapp.com",
+        databaseURL: "https://gully-cricket-73b1b-default-rtdb.firebaseio.com/",
+        projectId: "gully-cricket-73b1b",
+        storageBucket: "gully-cricket-73b1b.appspot.com",
+        messagingSenderId: "338874987747",
+        appId: "1:338874987747:web:7f6d2bca8ecbc4791a23f9"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    const dict = {
+        hi: {
+            title: "🏏 गली क्रिकेट लाइव सेटअप", matchName: "मैच / टूर्नामेंट का नाम", teamA: "बैटिंग टीम का नाम (Inning 1)",
+            teamB: "बॉलिंग टीम का नाम (Inning 1)", toss: "टॉस किसने जीता?", decision: "क्या फैसला किया?",
+            overs: "कुल ओवर (Total Overs)", striker: "स्ट्राइक बैट्समैन (Striker)", nonstriker: "नॉन-स्ट्राइक बैट्समैन (Non-Striker)",
+            bowler: "पहला बॉलर (Bowler)", btnStart: "मैच शुरू और लाइव करें 🚀", bat: "बैट्समैन", r: "रन", b: "बॉल",
+            bowl: "बॉलर", o: "OVER", br: "रन", w: "विकेट", recent: "Recent Balls (This Over)", share: "ग्रुप में लाइव लिंक शेयर करें 👇",
+            popBat: "☝️ विकेट गिरा! नए बैट्समैन का नाम लिखें:", popBowl: "🔄 OVER समाप्त! नए बॉलर का नाम लिखें:"
+        },
+        en: {
+            title: "🏏 Gully Cricket Setup", matchName: "Match Name / Tournament Name", teamA: "Batting Team Name",
+            teamB: "Bowling Team Name", toss: "Who won the toss?", decision: "What elected?",
+            overs: "Total Overs", striker: "Striker Batsman", nonstriker: "Non-Striker Batsman",
+            bowler: "Opening Bowler", btnStart: "Start Match & Go Live 🚀", bat: "Batsman", r: "R", b: "B",
+            bowl: "Bowler", o: "O", br: "R", w: "W", recent: "Recent Balls (This Over)", share: "Share Live Score Link 👇",
+            popBat: "☝️ Wicket! Enter New Batsman Name:", popBowl: "🔄 Over End! Enter New Bowler Name:"
+        }
+    };
+
+    window.toggleLanguage = function() {
+        let l = document.getElementById('app-lang').value;
+        document.getElementById('setup-title').innerText = dict[l].title;
+        document.getElementById('lbl-match-name').innerText = dict[l].matchName;
+        document.getElementById('lbl-team-a').innerText = dict[l].teamA;
+        document.getElementById('lbl-team-b').innerText = dict[l].teamB;
+        document.getElementById('lbl-toss').innerText = dict[l].toss;
+        document.getElementById('lbl-decision').innerText = dict[l].decision;
+        document.getElementById('lbl-overs').innerText = dict[l].overs;
+        document.getElementById('lbl-striker').innerText = dict[l].striker;
+        document.getElementById('lbl-nonstriker').innerText = dict[l].nonstriker;
+        document.getElementById('lbl-bowler').innerText = dict[l].bowler;
+        document.getElementById('btn-start').innerText = dict[l].btnStart;
+        
+        document.getElementById('th-bat').innerText = dict[l].bat;
+        document.getElementById('th-r').innerText = dict[l].r;
+        document.getElementById('th-b').innerText = dict[l].b;
+        document.getElementById('th-bowl').innerText = dict[l].bowl;
+        document.getElementById('th-o').innerText = dict[l].o;
+        document.getElementById('th-br').innerText = dict[l].br;
+        document.getElementById('th-w').innerText = dict[l].w;
+        document.getElementById('lbl-recent').innerText = dict[l].recent;
+        document.getElementById('lbl-share').innerText = dict[l].share;
+        document.getElementById('pop-txt-bat').innerText = dict[l].popBat;
+        document.getElementById('pop-txt-bowl').innerText = dict[l].popBowl;
+    };
+
+    setInterval(() => {
+        const d = new Date();
+        document.getElementById('live-time-box').innerText = d.toLocaleDateString() + " | " + d.toLocaleTimeString();
+    }, 1000);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    let matchId = urlParams.get('matchId');
+    let isScorer = true;
+    let historyStack = [];
+
+    let match = {
+        title: '', runs: 0, wickets: 0, balls: 0, totalOvers: 5,
+        teamA: '', teamB: '', tossWinner: '', tossDecision: '', isFinished: false,
+        bat1: { name: '', runs: 0, balls: 0, fours: 0, sixes: 0, isStriker: true },
+        bat2: { name: '', runs: 0, balls: 0, fours: 0, sixes: 0, isStriker: false },
+        bowl: { name: '', balls: 0, runs: 0, wickets: 0 },
+        ballsList: [] 
+    };
+
+    if (matchId) {
+        isScorer = false;
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('scoreboard-screen').classList.remove('hidden');
+        document.getElementById('scorer-controls').classList.add('hidden'); 
+        document.getElementById('btn-next-match').classList.add('hidden'); 
+        
+        database.ref('matches/' + matchId).on('value', (snapshot) => {
+            if (snapshot.exists()) {
+                match = snapshot.val();
+                updateUI();
+            }
+        });
+    } else {
+        const savedMatchId = localStorage.getItem('active_gully_match_id');
+        if (savedMatchId) {
+            matchId = savedMatchId;
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('scoreboard-screen').classList.remove('hidden');
+            database.ref('matches/' + matchId).on('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    match = snapshot.val();
+                    updateUI();
+                }
+            });
+        }
+    }
+
+    function startMatch() {
+        matchId = 'match_' + Date.now();
+        localStorage.setItem('active_gully_match_id', matchId);
+        
+        match.title = document.getElementById('match-name').value || 'Gully Match';
+        match.teamA = document.getElementById('team-a').value || 'Team A';
+        match.teamB = document.getElementById('team-b').value || 'Team B';
+        match.tossWinner = document.getElementById('toss-winner').value;
+        match.tossDecision = document.getElementById('toss-decision').value;
+        match.totalOvers = parseInt(document.getElementById('match-overs').value) || 5;
+        
+        match.bat1.name = document.getElementById('player-bat1').value || 'Striker';
+        match.bat2.name = document.getElementById('player-bat2').value || 'Non-Striker';
+        match.bowl.name = document.getElementById('player-bowl').value || 'Bowler';
+        match.ballsList = [];
+        match.runs = 0; match.wickets = 0; match.balls = 0;
+        match.isFinished = false;
+
+        document.getElementById('setup-screen').classList.add('hidden');
+        document.getElementById('scoreboard-screen').classList.remove('hidden');
+        
+        saveToFirebase();
+        
+        database.ref('matches/' + matchId).on('value', (snapshot) => {
+            if (snapshot.exists()) { match = snapshot.val(); updateUI(); }
+        });
+    }
+
+    function saveToFirebase() {
+        if(isScorer && matchId) {
+            database.ref('matches/' + matchId).set(match);
+        }
+    }
+
+    function addRun(run) {
+        if (match.isFinished) return;
+        pushToUndo();
+        let striker = match.bat1.isStriker ? match.bat1 : match.bat2;
+        striker.runs += run;
+        striker.balls += 1;
+        if(run === 4) striker.fours += 1;
+        if(run === 6) striker.sixes += 1;
+
+        match.runs += run;
+        match.balls += 1;
+        match.bowl.balls += 1;
+        match.bowl.runs += run;
+        
+        if (!match.ballsList) match.ballsList = [];
+        match.ballsList.push(run);
+
+        if (run === 1 || run === 3) {
+            match.bat1.isStriker = !match.bat1.isStriker;
+            match.bat2.isStriker = !match.bat2.isStriker;
+        }
+
+        checkOverEnd();
+        saveToFirebase();
+    }
+
+    function addExtra(type) {
+        if (match.isFinished) return;
+        pushToUndo();
+        match.runs += 1;
+        match.bowl.runs += 1;
+        if (!match.ballsList) match.ballsList = [];
+        match.ballsList.push(type === 'WD' ? 'WD' : 'NB');
+        saveToFirebase();
+    }
+
+    function triggerWicket() {
+        if (match.isFinished) return;
+        pushToUndo();
+        match.wickets += 1;
+        match.balls += 1;
+        match.bowl.balls += 1;
+        match.bowl.wickets += 1;
+        
+        if (!match.ballsList) match.ballsList = [];
+        match.ballsList.push('W');
+
+        if (match.wickets >= 10) {
+            endMatchCompletely();
+            return;
+        }
+        document.getElementById('popup-next-batsman').classList.remove('hidden');
+        saveToFirebase();
+    }
+
+    function checkOverEnd() {
+        if (match.balls > 0 && match.balls % 6 === 0) {
+            match.bat1.isStriker = !match.bat1.isStriker;
+            match.bat2.isStriker = !match.bat2.isStriker;
+            if (match.balls / 6 >= match.totalOvers) {
+                endMatchCompletely();
+            } else {
+                document.getElementById('popup-next-bowler').classList.remove('hidden');
+            }
+        }
+    }
+
+    function submitNewBatsman() {
+        let n = document.getElementById('new-batsman-name').value || 'New Player';
+        if (match.bat1.isStriker) {
+            match.bat1 = { name: n, runs: 0, balls: 0, fours: 0, sixes: 0, isStriker: true };
+        } else {
+            match.bat2 = { name: n, runs: 0, balls: 0, fours: 0, sixes: 0, isStriker: true };
+        }
+        document.getElementById('new-batsman-name').value = '';
+        document.getElementById('popup-next-batsman').classList.add('hidden');
+        checkOverEnd();
+        saveToFirebase();
+    }
+
+    function submitNewBowler() {
+        let n = document.getElementById('new-bowler-name').value || 'Next Bowler';
+        match.bowl = { name: n, balls: 0, runs: 0, wickets: 0 };
+        match.ballsList = []; 
+        document.getElementById('new-bowler-name').value = '';
+        document.getElementById('popup-next-bowler').classList.add('hidden');
+        saveToFirebase();
+    }
+
+    function pushToUndo() {
+        if (historyStack.length > 20) historyStack.shift();
+        historyStack.push(JSON.stringify(match));
+    }
+
+    function undoLastBall() {
+        if (historyStack.length > 0) {
+            match = JSON.parse(historyStack.pop());
+            saveToFirebase();
+        } else {
+            alert("No more actions to undo!");
+        }
+    }
+
+    function endMatchCompletely() {
+        match.isFinished = true;
+        saveToFirebase();
+    }
+
+    function resetForNextMatch() {
+        if(confirm("अगला मैच सेटअप करें? पुराना लिंक काम नहीं करेगा।")) {
+            database.ref('matches/' + matchId).remove();
+            localStorage.removeItem('active_gully_match_id'); 
+            window.location.href = window.location.origin + window.location.pathname;
+        }
+    }
+
+    function formatOvers(balls) { return `${Math.floor(balls / 6)}.${balls % 6}`; }
+
+    function shareMatchLink() {
+        let shareUrl = window.location.origin + window.location.pathname + '?matchId=' + matchId;
+        let txt = `=== 🏏 GULLY CRICKET LIVE ===%0A🔥 ${match.title.toUpperCase()}%0A🏆 ${match.teamA} vs ${match.teamB}%0A📊 Score: ${match.runs}/${match.wickets} (${formatOvers(match.balls)} Ov)%0A👉 Live Link: ${encodeURIComponent(shareUrl)}`;
+        window.open(`https://api.whatsapp.com/send?text=${txt}`, '_blank');
+    }
+
+    function updateUI() {
+        if (!match) return;
+        document.getElementById('view-match-title').innerText = (match.title || 'GULLY CRICKET').toUpperCase();
+        document.getElementById('view-toss-status').innerText = `📢 ${match.tossWinner || 'Team'} won toss & elected to ${match.tossDecision || 'Bat'}`;
+        document.getElementById('view-teams').innerText = `${match.teamA || 'Team A'} vs ${match.teamB || 'Team B'}`;
+        document.getElementById('score-runs').innerText = match.runs || 0;
+        document.getElementById('score-wickets').innerText = match.wickets || 0;
+        document.getElementById('score-overs').innerText = formatOvers(match.balls || 0);
+        document.getElementById('max-overs').innerText = match.totalOvers || 5;
+        
+        let played = (match.balls || 0) / 6 || 0.1;
+        document.getElementById('current-rr').innerText = ((match.runs || 0) / played).toFixed(2);
+
+        if (match.bat1) {
+            document.getElementById('name-bat1').innerText = (match.bat1.isStriker ? '🏏 ' : '') + (match.bat1.name || 'Striker');
+            document.getElementById('name-bat1').className = match.bat1.isStriker ? 'active-p' : '';
+            document.getElementById('runs-bat1').innerText = match.bat1.runs || 0;
+            document.getElementById('balls-bat1').innerText = match.bat1.balls || 0;
+            document.getElementById('fours-bat1').innerText = match.bat1.fours || 0;
+            document.getElementById('sixes-bat1').innerText = match.bat1.sixes || 0;
+            document.getElementById('sr-bat1').innerText = (((match.bat1.runs || 0) / (match.bat1.balls || 1)) * 100).toFixed(1);
+        }
+
+        if (match.bat2) {
+            document.getElementById('name-bat2').innerText = (!match.bat1.isStriker ? '🏏 ' : '') + (match.bat2.name || 'Non-Striker');
+            document.getElementById('name-bat2').className = !match.bat1.isStriker ? 'active-p' : '';
+            document.getElementById('runs-bat2').innerText = match.bat2.runs || 0;
+            document.getElementById('balls-bat2').innerText = match.bat2.balls || 0;
+            document.getElementById('fours-bat2').innerText = match.bat2.fours || 0;
+            document.getElementById('sixes-bat2').innerText = match.bat2.sixes || 0;
+            document.getElementById('sr-bat2').innerText = (((match.bat2.runs || 0) / (match.bat2.balls || 1)) * 100).toFixed(1);
+        }
+
+        if (match.bowl) {
+            document.getElementById('name-bowl').innerText = match.bowl.name || 'Bowler';
+            document.getElementById('overs-bowl').innerText = formatOvers(match.bowl.balls || 0);
+            document.getElementById('runs-bowl').innerText = match.bowl.runs || 0;
+            document.getElementById('wickets-bowl').innerText = match.bowl.wickets || 0;
+            let bOvers = (match.bowl.balls || 0) / 6 || 0.1;
+            document.getElementById('eco-bowl').innerText = ((match.bowl.runs || 0) / bOvers).toFixed(1);
+        }
+
+        let row = document.getElementById('live-ball-history');
+        row.innerHTML = '';
+        let bList = match.ballsList || [];
+        bList.forEach(b => {
+            let d = document.createElement('div');
+            d.className = 'ball-num';
+            if (b === 'W') d.classList.add('ball-wicket');
+            else if (b === 4 || b === 6) d.classList.add('ball-four-six');
+            d.innerText = b;
+            row.appendChild(d);
+        });
+
+        if (match.isFinished) {
+            document.getElementById('scorer-controls').classList.add('hidden');
+            document.getElementById('match-result-card').classList.remove('hidden');
+            document.getElementById('result-text').innerText = `🏆 Match Finished! Score: ${match.runs}/${match.wickets}`;
+            let winnerPlayer = (match.bat1 && match.bat2 && match.bat1.runs >= match.bat2.runs) ? match.bat1.name : (match.bat2 ? match.bat2.name : 'Best Player');
+            document.getElementById('mom-text').innerText = `🌟 Man of the Match: ${winnerPlayer} 🏅`;
+        } else {
+            document.getElementById('match-result-card').classList.add('hidden');
+            if (isScorer) {
+                document.getElementById('scorer-controls').classList.remove('hidden');
+            }
+        }
+    }
+</script>
+</body>
+</html>
